@@ -49,14 +49,6 @@ class Table:
             print_array(row,self.rows[row],"td")
         print("</table>")
         
-
-t = Table("test")
-t.add_column("CRS312-4C+8XG")
-t.add_column("CRS328-24P-4S+")
-t.add_row("regel")
-
-t.print()
-
 tables = {}
 for file in files:
     with open(file, 'r') as fp:
@@ -68,16 +60,19 @@ for file in files:
                 tables[api] = Table(api)
             if type(data[api]["data"]) == list:
                 items = data[api]["data"][0]
-                postfix="[]"
+                prefix="[]"
             else:
                 items = data[api]["data"]
-                postfix=""
+                prefix=""
             for sample_key in items:
                 if isinstance(sample_key,str):
                     sample_value = items[sample_key]
                     if isinstance(sample_value,str):
-                        tables[api].add_row(sample_key + postfix)
-                        tables[api].set_value(column,sample_key + postfix, sample_value)
+                        tables[api].add_row(prefix + sample_key)
+                        tables[api].set_value(column,prefix + sample_key, sample_value)
+                    if isinstance(sample_value,list):
+                        tables[api].add_row(sample_key + "[]")
+                        tables[api].set_value(column, sample_key + "[]", str(len(sample_value)) + "x " + sample_value[0])
 print("<html><body>")
 for table in tables:
     tables[table].print_html()
