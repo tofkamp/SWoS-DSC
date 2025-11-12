@@ -1,6 +1,9 @@
 import json
+import os
 
 files = [ "CSS326-24G-2S+__2.18_763906357EDB.json","CRS312-4C+8XG_r2_2.18_HE208JZZ6YZ.json","CRS328-24P-4S+_r2_2.18_HJE0A2EJNXH.json"]
+files = os.listdir("samples")
+files = [f for f in files if os.path.isfile('samples/'+f)]
 
 # field, api,webpage,webfield,decode
 # print to .markdown
@@ -54,7 +57,20 @@ class Table:
         fp.write("</table>")
 
     def write_markdown(self,fp):
-        return
+        def print_array(what, array):
+            line = "|{what}|".format(what=what)
+            for item in array:
+                line += "{item}|".format(item=item)
+            fp.write(line+"\n")
+        
+        print_array(self.about, self.column_headers)
+        for item in self.column_headers:
+            fp.write("|---")
+        fp.write("|---|\n")
+        for row in sorted(self.rows.keys()):
+            print_array(row,self.rows[row])
+        fp.write("\n\n")
+        
 
     def write_csv(self,csvwriter,api):
         for row in sorted(self.rows.keys()):
@@ -77,7 +93,7 @@ with open('SWoS-api.csv', newline='') as csvfile:
         #tables[row["api"]].add_row(row["decode"])
         
 for file in files:
-    with open(file, 'r') as fp:
+    with open("samples/" + file, 'r') as fp:
         data = json.load(fp)
     column = file.split("_")[0]    # type of switch eg CRS312-4C+8XG
     for api in data:
@@ -128,3 +144,7 @@ tr:nth-child(even) {
     for table in tables:
         tables[table].print_html(fp)
     fp.write("</body></html>")
+
+with open("SWos-api.md", mode="w") as fp:
+    for table in tables:
+        tables[table].write_markdown(fp)

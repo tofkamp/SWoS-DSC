@@ -2,10 +2,19 @@
 #import logging
 #logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
 
-hostname = "192.168.88.1"
-username = "admin"
-password = ""
-has_POE = False
+import argparse
+
+parser = argparse.ArgumentParser(description='Get a config sample of a Mikrotik SWoS switch')
+parser.add_argument('--hostname')
+parser.add_argument('--username')
+parser.add_argument('--password')
+parser.add_argument('--has_POE', action='store_true', help='Also sample POE settings')
+parser.add_argument("--version", action="version", version="%(prog)s 0.1.0"
+
+hostname = args.hostname if args.hostname else "192.168.88.1"
+username = args.username if args.username else "admin"
+password = args.password if args.password else ""
+has_POE = args.has_POE
 
 allinfo = {}
 def writeout(tabje):
