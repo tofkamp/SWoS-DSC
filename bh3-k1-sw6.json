@@ -1,0 +1,131 @@
+{
+  "hostname": "192.168.88.1",
+  "username": "admin",
+  "has_POE": false,
+  "identity": "bh3-k1-sw6",
+  "vlans": [
+    {
+      "name": "beheer",
+      "vlan_id": 1
+    },
+    {
+      "name": "werkstations",
+      "vlan_id": 4
+    },
+    {
+      "name": "kantoor",
+      "vlan_id": 10
+    },
+    {
+      "name": "publiek",
+      "vlan_id": 20
+    },
+    {
+      "name": "OU",
+      "vlan_id": 50,
+      "learning": false,
+      "mirror": true,
+      "port_isolation": true,
+      "igmp_snooping": true
+    },
+    {
+      "name": "vmotion",
+      "vlan_id": 100
+    },
+    {
+      "name": "vmkernel",
+      "vlan_id": 101
+    },
+    {
+      "name": "Storage",
+      "vlan_id": 102
+    },
+    {
+      "name": "Replication",
+      "vlan_id": 103
+    },
+    {
+      "name": "Backup",
+      "vlan_id": 112
+    },
+    {
+      "name": "Wifi",
+      "vlan_id": 201
+    },
+    {
+      "name": "DMZ",
+      "vlan_id": 202
+    },
+    {
+      "name": "wifi-AP",
+      "vlan_id": 220
+    },
+    {
+      "name": "Test-ICT",
+      "vlan_id": 254
+    }
+  ],
+  "access_ports": [
+    {
+      "interface": 1,
+      "name": "sophos kan",
+      "vlan_id": 10
+    },
+    {
+      "interface": 2,
+      "name": "Kantoor",
+      "vlan_id": 10
+    },
+    {
+      "interface": 3,
+      "name": "sophos dmz",
+      "vlan_id": 202
+    },
+    {
+      "interface": 4,
+      "name": "publiek",
+      "vlan_id": 20
+    }
+  ],
+  "bonding_ports": [
+    {
+      "interface1": 11,
+      "interface2": 12,
+      "name": "uplink2core",
+      "vlans": [
+        4,
+        10,
+        20,
+        50,
+        100,
+        101,
+        102,
+        103,
+        112,
+        201,
+        202,
+        220,
+        251,
+        254
+      ]
+    }
+  ],
+  "trunk_ports": [
+    {
+      "interface": 9,
+      "name": "bh3-k2-sw2",
+      "untagged_vlan":1,
+      "vlans": [
+        10,
+        20,
+        50,
+        100,
+        101,
+        201,
+        202,
+        220,
+        254
+      ]
+    }
+  ]
+}
