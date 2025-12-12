@@ -1,14 +1,17 @@
 # emulate swos switch
 
+# todo
+# argparse
+#  -readonly
+#  -verbose
+
 import json
 switch = "CRS312-4C+8XG_r2_2.18_HE208JZZ6YZ"
+switch="CRS328-24P-4S+_r2_2.18_HJS0ATSHYKF"
 #switch="CRS354-48P-4S+2Q+_r4_2.18_HJP0AGA6JTB"
 
 with open(f"Samples/{switch}.json") as fp:
     switch_data = json.load(fp)
-
-with open("scraper/index.html") as fp:
-    index_html = fp.read()
 
 from bottle import route, run, request 
 
@@ -72,11 +75,12 @@ def poe_b():
 @route('/fwd.b', method='POST')
 @route('/link.b', method='POST')
 @route('/lacp.b', method='POST')
+@route('/poe.b', method='POST')
 def do_post():
-    print("Pre",switch_data[request.path]["text"])
-    switch_data[request.path]["text"] = request.body.getvalue()
-    print("Post",switch_data[request.path]["text"],"\n\n")
-    #print(request.body.getvalue())
+    print("\nPre",switch_data[request.path]["text"])
+    #switch_data[request.path]["text"] = request.body.getvalue()
+    #print("Post",switch_data[request.path]["text"])
+    print("Post",request.body.getvalue())
     return "Yeah post"
 
 run(host='localhost', port=80,debug=True, reloader=True)
