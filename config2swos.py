@@ -98,6 +98,7 @@ poe_defaults = { "priority" : 4, "lldp_enabled" : False }
 def vlans_config(port, vlanss):
     for vlan in vlanss:
         if not vlans.get(vlan):   # does vlan exist ? no, create it
+            #print(vlans_defaults)
             vlans.add(vlan, name="VLAN {}".format(vlan), **vlans_defaults)
         vlans.add_port(vlan,port)
 
@@ -156,7 +157,7 @@ def poe_configure(port,poe_output):
 for want in want_vlans:
     #print(want["vlan_id"],want["name"])
     defaultconfig = vlans_defaults
-    defaultconfig["name"] = "VLAN " + str(want["vlan_id"])
+    #defaultconfig["name"] = "VLAN " + str(want["vlan_id"])  ##### doe het anders
     result_parameters = figureitout(want, defaultconfig)
     #vlans.add(want["vlan_id"],name = want["name"],**vlans_defaults)
     vlans.add(want["vlan_id"],**result_parameters)
