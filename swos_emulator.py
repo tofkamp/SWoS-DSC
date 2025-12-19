@@ -4,6 +4,8 @@
 # argparse
 #  -readonly
 #  -verbose
+from mikrotik_swos import utils      # mikrotik_to_json(s)
+from mikrotik_swos import swostab    # _update_data(self, field, value = None, field_index = None):
 
 import json
 switch = "CRS312-4C+8XG_r2_2.18_HE208JZZ6YZ"
@@ -80,7 +82,13 @@ def do_post():
     print("\nPre",switch_data[request.path]["text"])
     #switch_data[request.path]["text"] = request.body.getvalue()
     #print("Post",switch_data[request.path]["text"])
-    print("Post",request.body.getvalue())
+    print("Request",request.body.getvalue())
+    dic = utils.mikrotik_to_json(request.body.getvalue().decode("utf-8"))    # is a binairy string
+    print(dic)
+    for d in dic:
+        switch_data[request.path]["data"][d] = dic[d]
+    switch_data[request.path]["text"] = utils.json_to_mikrotik(switch_data[request.path]["data"])
+    print("Post",switch_data[request.path]["text"])
     return "Yeah post"
 
 run(host='localhost', port=80,debug=True, reloader=True)
