@@ -8,9 +8,10 @@ from mikrotik_swos import utils      # mikrotik_to_json(s)
 from mikrotik_swos import swostab    # _update_data(self, field, value = None, field_index = None):
 
 import json
-switch = "CRS312-4C+8XG_r2_2.18_HE208JZZ6YZ"
-switch="CRS328-24P-4S+_r2_2.18_HJS0ATSHYKF"
-#switch="CRS354-48P-4S+2Q+_r4_2.18_HJP0AGA6JTB"
+#switch = "CRS312-4C+8XG_r2_2.18_HE208JZZ6YZ"
+#switch="CRS328-24P-4S+_r2_2.18_HJS0ATSHYKF"
+#switch="CRS354-48P-4S+2Q+_r4_2.18_HJP0AGA6JTB"    # web interface werkt niet
+switch="CRS354-48P-4S+2Q+__2.18_B8440C46690F"
 
 with open(f"Samples/{switch}.json") as fp:
     switch_data = json.load(fp)
@@ -70,6 +71,7 @@ def snmp_b():
 
 @route('/poe.b')
 def poe_b():
+    print(switch_data["/poe.b"]["text"])
     return switch_data["/poe.b"]["text"]
 
 @route('/sys.b', method='POST')
@@ -78,17 +80,21 @@ def poe_b():
 @route('/link.b', method='POST')
 @route('/lacp.b', method='POST')
 @route('/poe.b', method='POST')
+@route('/stats.b', method='POST')
+@route('/reseterrs', method='POST')
 def do_post():
-    print("\nPre",switch_data[request.path]["text"])
-    #switch_data[request.path]["text"] = request.body.getvalue()
-    #print("Post",switch_data[request.path]["text"])
-    print("Request",request.body.getvalue())
-    dic = utils.mikrotik_to_json(request.body.getvalue().decode("utf-8"))    # is a binairy string
-    print(dic)
+    print("Post",switch_data[request.path]["text"])
+    if request.path in switch_data:
+        print("\nPre",switch_data[request.path]["text"])
+        #switch_data[request.path]["text"] = request.body.getvalue()
+        print("Post",switch_data[request.path]["text"])
+        print("Request",request.body.getvalue())
+        dic = utils.mikrotik_to_json(request.body.getvalue().decode("utf-8"))    # is a binairy string
+    print("dic=",dic)
     for d in dic:
+        print("d=",d)
         switch_data[request.path]["data"][d] = dic[d]
     switch_data[request.path]["text"] = utils.json_to_mikrotik(switch_data[request.path]["data"])
-    print("Post",switch_data[request.path]["text"])
     return "Yeah post"
 
 run(host='localhost', port=80,debug=True, reloader=True)

@@ -32,12 +32,12 @@ allinfo = {}
 def writeout(tabje):
     allinfo[tabje._page] = { "text": tabje._text,
                              "data": tabje._data }
-restapis = [ "/sys.b","/vlan.b","/link.b","/fwd.b","/lacp.b","/rstp.b","/host.b", "/acl.b","/snmp.b","/fan.b","/sfp.b","/stats.b","/poe.b"]
+restapis = [ "/sys.b","/vlan.b","/link.b","/fwd.b","/lacp.b","/rstp.b","/host.b", "/acl.b","/snmp.b","/sfp.b","/stats.b"]  # "/fan.b","/poe.b"
 
 for api in restapis:
     print(api)
     #swos = SWOS("192.168.88.1","admin","")
-    swos = SWOS("10.10.1.86","admin","gatvuln")
+    swos = SWOS("10.10.1.116","admin","gatvuln")
     swos.load_tab_data(api)
     #swos.show()
     writeout(swos)

@@ -1,32 +1,58 @@
+# bekende fouten
+# vlans hebben geen naam
+# system.name() geeft niet de naam, over erving probleem met swos
+
 # todo
+# opruimen oude funkties
 # add poe to acces/trunk/bond struct ?
 # system: add dhcp_trusted_ports allow_from_port , igmp_fast_leave and discovery_protocol to acces/trunk/bond struct ?
 # commandline options
 # dryrun
 # documentation
-# 
+# json-schema
+# support for 48 ports switches
+# settings in /sys.b per port
+# join acces + trunk + LAG into one port-type
+# bonding ports use a list of interfaces instead of the interface1 and interface2
+
+# dubbesl array dinger test met
+# python config2swos.py --hostname 127.0.0.1 --configfile Configs\48poortswitch.json --password thepassword
 
 import logging
-#logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
-
-
 import argparse
+#import jsonschema
+
 parser = argparse.ArgumentParser(description='Write a config to a mikrotik SWoS switch')
 parser.add_argument('--hostname')
 parser.add_argument('--configfile',required=True)
 parser.add_argument('--password')
 parser.add_argument('--has_POE', action='store_true', help='Set this if the switch supports POE')
-parser.add_argument("--version", action="version", version="%(prog)s 0.1.0")
+parser.add_argument('--debug', action='store_true', help='Show what is going on in the background')
+parser.add_argument("--version", action="version", version="%(prog)s 0.1.1")
 
 args = parser.parse_args()
 
 filename = args.configfile
 password = args.password if args.password else ""
-
+if args.debug:
+    logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+    
 import json
 with open(filename, 'r') as file:
     data = json.load(file)
+if False:
+    # the schema is not niet goed
+    with open("Configs\\configs.schema.json", 'r') as file:
+        schema = json.load(file)
 
+    try:
+        jsonschema.validate(instance = data, schema = schema)
+        print("Success: Data is valid!")
+    except jsonschema.exceptions.ValidationError as err:
+        print(f"Validation Error: {err.message}")
+    except jsonschema.exceptions.SchemaError as err:
+        print(f"The schema itself is invalid: {err.message}")
+    
 username = "admin"    # there is no other user
 #password = data["password"]
 if "hostname" in data:
@@ -78,7 +104,8 @@ mktsid = utils.decode_string(system._data["sid"])  # serial nr
 mktid = utils.decode_string(system._data["id"])   # naam ?
 mktver = utils.decode_string(system._data["ver"])   # version
 mktrev = utils.decode_string(system._data["rev"])   # revision
-    
+
+
 want_vlans = data["vlans"]
 access_ports = data["access_ports"]
 bonding_ports = data["bonding_ports"]
@@ -87,9 +114,10 @@ if "poe_ports" in data:
     poe_ports = data["poe_ports"]
 else:
     poe_ports = []
-   
+#print(vlans._parsed_data[20])
+
 vlans.reset_member_cfg()    # remove all ports with vlan
-dhcp_trusted_ports = []
+dhcp_trusted_ports = set()
 
 vlans_defaults = { "port_isolation":False, "learning":True, "mirror": False, "igmp_snooping":False }
 ports_defaults = { "enabled":True, "autoneg":True, "duplex":False, "tx_flow_control":True, "rx_flow_control":False, "speed":1000 }
@@ -99,7 +127,8 @@ def vlans_config(port, vlanss):
     for vlan in vlanss:
         if not vlans.get(vlan):   # does vlan exist ? no, create it
             #print(vlans_defaults)
-            vlans.add(vlan, name="VLAN {}".format(vlan), **vlans_defaults)
+            vlans.add(vlan_id = vlan, name="VLAN {}".format(vlan), **vlans_defaults)
+        #print(vlan,type(vlan),vlans._parsed_data)
         vlans.add_port(vlan,port)
 
 def ports_config(port,name):
@@ -109,12 +138,9 @@ def ports_config(port,name):
         ports.configure(port, name=name, **ports_defaults)
 
 def figureitout(parameters, defaultconfig):
-    result_parameters = {}
-    #print(parameters)
-    #print(defaultconfig)
-    for parameter in defaultconfig:
-        #print(parameter)
-        result_parameters[parameter] = parameters.get(parameter, defaultconfig[parameter])
+    result_parameters = defaultconfig | parameters
+    #for parameter in defaultconfig:
+    #    result_parameters[parameter] = parameters.get(parameter, defaultconfig[parameter])
     return result_parameters
 
 def ports_config2(port,parameters):
@@ -128,19 +154,15 @@ def ports_config2(port,parameters):
     result_parameters = figureitout(parameters, defaultconfig)
     ports.configure(port, **result_parameters)
     
-def lacp_config(port,mode= "passive"):    # in future make it also work with static lacp groups
-    lacp.port_lacp_mode(port, mode)
-
-def lacp_config2(port, defaultmode, parameters):
-    defaultconfig = { "mode": defaultmode }
+def lacp_config2(port, mode, parameters):
+    group_id = None
     if "mode" in parameters:
-        if parameters["mode"] == "static":
+        mode = parameters["mode"]
+        if mode == "static":
             if "group_id" not in parameters:
-                print("Port {}: Error, static LACP without group_id",format(port))
-                return
-            defaultconfig["group_id"] = 1  # will be overwritten because group_id is in parameters
-    result_parameters = figureitout(parameters, defaultconfig)
-    lacp.port_lacp_mode(port, **result_parameters)
+                raise("Port {}: Error, static LACP without group_id",format(port))
+            group_id = parameters["group_id"]
+    lacp.port_lacp_mode(port, mode, group_id)
 
 def forward_config(port, receive_mode, default_vlan_id=4090):
     forward.port_vlan_config(port, mode="strict",receive_mode = receive_mode, default_vlan_id = default_vlan_id, force_vlan_id = False)
@@ -153,28 +175,33 @@ def poe_configure2(port, parameters):
 
 def poe_configure(port,poe_output):
     poe.configure_port(port, poe_output = poe_output, **poe_defaults)
-    
+
+#print("want",vlans._parsed_data[1])
 for want in want_vlans:
     #print(want["vlan_id"],want["name"])
     defaultconfig = vlans_defaults
     #defaultconfig["name"] = "VLAN " + str(want["vlan_id"])  ##### doe het anders
     result_parameters = figureitout(want, defaultconfig)
     #vlans.add(want["vlan_id"],name = want["name"],**vlans_defaults)
-    vlans.add(want["vlan_id"],**result_parameters)
+    #print("want",vlans._parsed_data[1])
+    #print(result_parameters)
+    #vlans.add(want["vlan_id"],**result_parameters)
+    vlans.add(**result_parameters)
+    #print("want",vlans._parsed_data[1])
+    #print(vlans._parsed_data[1])########################
 
+#print("access",vlans._parsed_data[1])
 for access_port in access_ports:
     vlans_config(access_port["interface"], (access_port["vlan_id"],))
-    #ports_config(access_port["interface"], access_port["name"])
     ports_config2(access_port["interface"], access_port)
-    #lacp_config(access_port["interface"], mode = "passive")
     lacp_config2(access_port["interface"], "passive", access_port)
     forward_config(access_port["interface"],receive_mode= "only untagged", default_vlan_id=access_port["vlan_id"])
 
+#print("trunk",vlans._parsed_data[1])
 # Trunk ports
 for trunk_port in trunk_ports:
     #ports_config(trunk_port["interface"], trunk_port["name"])
     ports_config2(trunk_port["interface"], trunk_port)
-    #lacp_config(trunk_port["interface"], mode = "passive")
     lacp_config2(trunk_port["interface"], "passive", trunk_port)
     if "untagged_vlan" in trunk_port:   # is it a hybrid trunk ?
         forward_config(trunk_port["interface"],receive_mode= "any",default_vlan_id = trunk_port["untagged_vlan"])
@@ -183,11 +210,11 @@ for trunk_port in trunk_ports:
         forward_config(trunk_port["interface"],receive_mode= "only tagged")
     vlans_config(trunk_port["interface"], trunk_port["vlans"])
 
+#print("lag",vlans._parsed_data[1])
 # LACP LAG ports
 for bond_port in bonding_ports:   # in future iterate over interfaces
     vlans_config(bond_port["interface1"], bond_port["vlans"])
     ports_config(bond_port["interface1"], bond_port["name"])
-    #lacp_config(bond_port["interface1"], mode = "active")
     lacp_config2(bond_port["interface1"], "active", bond_port)
 
     if "untagged_vlan" in bond_port:   # is it a hybrid trunk ?
@@ -200,7 +227,6 @@ for bond_port in bonding_ports:   # in future iterate over interfaces
     ########## interface 2
     vlans_config(bond_port["interface2"], bond_port["vlans"])
     ports_config(bond_port["interface2"], bond_port["name"])
-    #lacp_config(bond_port["interface2"], mode = "active")
     lacp_config2(bond_port["interface2"], "active", bond_port)
     if "untagged_vlan" in bond_port:   # is it a hybrid trunk ?
         forward_config(bond_port["interface2"],receive_mode= "any",default_vlan_id = bond_port["untagged_vlan"])
@@ -210,17 +236,19 @@ for bond_port in bonding_ports:   # in future iterate over interfaces
     
     #forward_config(bond_port["interface2"],receive_mode= "only tagged")
 
-    dhcp_trusted_ports.append(bond_port["interface1"])
-    dhcp_trusted_ports.append(bond_port["interface2"])
+    dhcp_trusted_ports.add(bond_port["interface1"])
+    dhcp_trusted_ports.add(bond_port["interface2"])
 
+#print("poe",vlans._parsed_data[1])
 if has_POE:
     for poe_port in poe_ports:
-        poe_configure(int(poe_port), poe_ports[poe_port])
+        #poe_configure(int(poe_port["port_id")), poe_ports[poe_port])
+        poe.configure_port(**poe_port)
     
 system.set(dhcp_add_information_option = False, identity = data["identity"], dhcp_trusted_port = dhcp_trusted_ports)    # required if you use LAG, else you will be in trouble
            #allow_from_port = [] , igmp_fast_leave = [], discovery_protocol = [])
 
-
+#print("save",vlans._parsed_data[1])
 forward.save()
 vlans.save()
 ports.save()
@@ -228,11 +256,13 @@ system.save()
 lacp.save()
 if has_POE:
     poe.save()
+    #poe.show()
+    
+#mkttype = utils.decode_string(system._data["brd"])   # type
+#mktsid = utils.decode_string(system._data["sid"])  # serial nr
+#mktid = utils.decode_string(system._data["id"])   # naam ?
+#mktver = utils.decode_string(system._data["ver"])   # version
+#mktrev = utils.decode_string(system._data["rev"])   # revision
+print("Wrote Desired Switch Config to",system.identity, system.version, system.board_name, system.revision, system.serial_number)
 
-mkttype = utils.decode_string(system._data["brd"])   # type
-mktsid = utils.decode_string(system._data["sid"])  # serial nr
-mktid = utils.decode_string(system._data["id"])   # naam ?
-mktver = utils.decode_string(system._data["ver"])   # version
-mktrev = utils.decode_string(system._data["rev"])   # revision
-print("Wrote Desired Switch Config to",mktid,mktver,mkttype,mktrev,mktsid)
 
